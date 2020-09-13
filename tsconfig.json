@@ -1,0 +1,34 @@
+/*  tsconfig.json */
+{
+    "compilerOptions": {
+      "rootDir": "src",
+      /* 基础配置 */
+      "target": "es2015",
+      "lib": [
+        "dom",
+        "esnext"
+      ],
+      "removeComments": false,
+      "declaration": true,
+      "sourceMap": true,
+  
+      /* 强类型检查配置 */
+      "strict": true,
+      "noImplicitAny": false,
+  
+      /* 模块分析配置 */
+      "baseUrl": ".",
+      "outDir": "./dist",
+      "esModuleInterop": true,
+      "moduleResolution": "node",
+      "resolveJsonModule": true
+    },
+    "include": [
+      "src"
+    ],
+    "exclude": [
+      "node_modules/**",
+      "test"
+    ]
+  }
+  
