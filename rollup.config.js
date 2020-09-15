@@ -7,7 +7,7 @@ import json from 'rollup-plugin-json';
 import { eslint } from 'rollup-plugin-eslint';
 
 export default {
-  input: "./src/main.ts",
+  input: "./src/index.ts",
   plugins: [
     typescript(),
     resolve(),
