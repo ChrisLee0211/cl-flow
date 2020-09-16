@@ -17,7 +17,8 @@ interface ClFlowClass {
     addRelation(source:nodeInfo,target:nodeInfo,type:"single"|"multi"):void;
     updateNode(cfg:any):void;
     deleteNode(id:string):void;
-    addReback(cfg):void;
+    addReback(sourceId:string,targetId:string):void;
+    getRebackNodes(id:string):Array<any>
     bindEvent(eventType:eventType,fn:(item:any)=>void);
     redo():void;
     undo():void;
@@ -92,6 +93,8 @@ class ClFlowCore implements ClFlowClass {
     private undoDeQueue:DeQueue|null = null;
     private redoDeQueue:DeQueue|null = null;
     private maxStep:number = 0;
+    /** 用于记录没有任何指向关系的孤立节点 */
+    private freeNodes:string[] = [];
     constructor(config:ClConfig){
         const validate:boolean = validateConfig(config);
         if(validate){
@@ -292,6 +295,7 @@ class ClFlowCore implements ClFlowClass {
         }
         try{
             graph.addItem("node",nodeData);
+            this.freeNodes.includes(info.id)===false && this.freeNodes.push(info.id);
             this.enterUndoQueue({action:"create",payload:{nodeData}});
             this.cleanRedoQueue()
         }catch(e){
@@ -450,9 +454,29 @@ class ClFlowCore implements ClFlowClass {
         }
     }
 
+    /**
+     * 添加一组回流关系(调用前请确保通过getRebackNodes获取可以创建回流的节点列表)
+     * @param sourceId 源头节点id
+     * @param targetId 目标节点id
+     * @author chrislee
+     * @Time 2020/9/16
+     */
     addReback(){
+
+    }
+
+    
+    /**
+     * 查找目标节点可创建回流关系的可用节点
+     * @param id 查找目标id
+     * @author chrislee
+     * @Time 2020/9/16
+     */
+    getRebackNodes(id):Array<any>{
+        const graph = this.checkGraph();
         
     }
+
     bindEvent
     redo
     undo

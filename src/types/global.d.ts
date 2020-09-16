@@ -88,7 +88,7 @@ type eventType = "node:click" |
 "node:dragstart" |
 "node:dragend" | 
 "node:drop"
-type snapshot = createAction|addRelationAction|multiNodeAction|updateAction|deleteAction|clearAction
+type snapshot = createAction|addRelationAction|multiNodeAction|updateAction|deleteAction|clearAction|addRebackAction
 
 type createAction = {
     action:"create",
@@ -140,5 +140,12 @@ type clearAction = {
     action: "clear",
     payload:{
         graph:any
+    }
+}
+
+type addRebackAction = {
+    action:"addReback",
+    payload:{
+        edge:any
     }
 }
