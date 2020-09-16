@@ -1,4 +1,3 @@
-
 declare interface Window {
         ResizeObserver:ResizeObserver
     }
@@ -65,6 +64,21 @@ interface nodeInfo {
     }
 }
 
+interface edgeInfo {
+    /** edge唯一id */
+    id:string,
+    /** 起始节点id */
+    source:string,
+    /** 目标节点id */
+    target:string,
+    /** 指向线条的类型 */
+    type?:string,
+    /** 起始节点的锚点 */
+    sourceAnchor?:number,
+    /** 目标节点的锚点 */
+    targetAnchor?:number,
+}
+
 type directionType = "vertical" | "horizontal";
 type eventType = "node:click" | 
 "node:dblclick" | 
@@ -74,4 +88,57 @@ type eventType = "node:click" |
 "node:dragstart" |
 "node:dragend" | 
 "node:drop"
-type snapshot = {action:"create"|"addRelation"|"multiNode"|"update"|"delete"|"clear",payload:any}
+type snapshot = createAction|addRelationAction|multiNodeAction|updateAction|deleteAction|clearAction
+
+type createAction = {
+    action:"create",
+    payload:{
+        nodeData:nodeInfo
+    }
+}
+
+type addRelationAction = {
+    action:"addRelation",
+    payload:{
+        source:nodeInfo,
+        target:nodeInfo,
+        edge:edgeInfo
+    }
+}
+
+type multiNodeAction = {
+    action:"multiNode",
+    payload:{
+        source:nodeInfo,
+        target:nodeInfo,
+        edge:edgeInfo,
+        multiInfo:{
+            onNode:nodeInfo,
+            onEdge:edgeInfo,
+            offNode:nodeInfo,
+            offEdge:edgeInfo
+        }
+    }
+}
+
+type updateAction = {
+    action: "update",
+    payload:{
+        before:{nodeData:nodeInfo},
+        after:{nodeData:nodeInfo}
+    }
+}
+
+type deleteAction = {
+    action: "delete",
+    payload:{
+        nodeData:nodeInfo
+    }
+}
+
+type clearAction = {
+    action: "clear",
+    payload:{
+        graph:any
+    }
+}

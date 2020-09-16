@@ -269,7 +269,7 @@ class ClFlowCore implements ClFlowClass {
         }
         try{
             this.graph?.addItem("node",nodeData);
-            this.enterUndoQueue({action:"create",payload:nodeData});
+            this.enterUndoQueue({action:"create",payload:{nodeData}});
             this.cleanRedoQueue()
         }catch(e){
             console.error(e);
@@ -286,11 +286,13 @@ class ClFlowCore implements ClFlowClass {
         const direction = this.config.direction;
         const {nodes,edges} = this.graph?.save()  as GraphData
         const nodeType = source.type;
+        const targetId:string = target.id??`node${(nodes?.length ?? 0) + 1}`;
         const position = countNextNodePosition(direction, source);
         const nodeData = {
-            id:target.id??`node${(nodes?.length ?? 0) + 1}`,
+            id:targetId,
             label:target.label??"",
             type:target.type??"node",
+            style:target.style??{},
             x:position.x,
             y:position.y,
             size:target.size??100,
@@ -299,7 +301,7 @@ class ClFlowCore implements ClFlowClass {
         const edgeData = {
             id: `edge${(edges?.length ?? 0) + 1}`,
             source: source.id,
-            target: target.id??`node${(nodes?.length ?? 0) + 1}`
+            target: targetId
         }
         try{
             this.graph?.addItem("node",nodeData);
@@ -307,12 +309,72 @@ class ClFlowCore implements ClFlowClass {
         }catch(e){
             console.error(e)
         }
+        let snapshot:snapshot = {action:"addRelation",payload:{source:source,target:nodeData,edge:edgeData}};
         if(type === "multi"){
-            
+            const sourceAnchor: number[] = direction === "horizontal" ? [0, 2] : [1, 3];
+            const targetAnchor: number = direction === "horizontal" ? 3 : 0;
+            const childPositon = countNextNodePosition(direction, nodeData);
+            const onNode = {
+                id: target.id?target.id+"1":`node${(nodes?.length ?? 0) + 2}`,
+                label: target.label ? target.label+"1" : "",
+                type: "node",
+                style:{},
+                size: target.size??100,
+                labelCfg: { style: { fontSize: Number((target.size??100) / 5) }},
+                x: direction === "horizontal" ? childPositon.x : childPositon.x + 200,
+                y: direction === "horizontal" ? childPositon.y - 200 : childPositon.y
+            };
+            const offNode = {
+                id: target.id?target.id+"2":`node${(nodes?.length ?? 0) + 3}`,
+                label: target.label ? target.label+"2" : "",
+                type: "node",
+                style:{},
+                size: target.size??100,
+                labelCfg: { style: { fontSize: Number((target.size??100)  / 5) }},
+                x: direction === "horizontal" ? childPositon.x : childPositon.x - 200,
+                y: direction === "horizontal" ? childPositon.y + 200 : childPositon.y
+            };
+            const onEdge = {
+                id: `edge${(edges?.length ?? 0) + 2}`,
+                source: targetId,
+                type: `mutex-line-${direction}`,
+                target: target.id?target.id+"1":`node${(nodes?.length ?? 0) + 2}`,
+                sourceAnchor: sourceAnchor[0],
+                targetAnchor
+            };
+            const offEdge = {
+                id: target.id?target.id+"2":`node${(nodes?.length ?? 0) + 3}`,
+                source: targetId,
+                type: `mutex-line-${direction}`,
+                target: `node${(nodes?.length ?? 0) + 3}`,
+                sourceAnchor: sourceAnchor[1],
+                targetAnchor
+            };
+            try{
+                this.graph?.addItem("node", onNode);
+                this.graph?.addItem("node", offNode);
+                this.graph?.addItem("edge", onEdge);
+                this.graph?.addItem("edge", offEdge);
+                snapshot = {
+                    action:"multiNode",
+                    payload:{
+                        source:source,
+                        target:nodeData,
+                        edge:edgeData,
+                        multiInfo:{
+                            onNode,
+                            onEdge,
+                            offNode,
+                            offEdge
+                        }
+                    }
+                }
+            }catch(e){
+                console.error(e)
+            }
         }
-        this.enterUndoQueue({action:"addRelation",payload:{source:source,target:nodeData,edge:edgeData}});
+        this.enterUndoQueue(snapshot)
         this.cleanRedoQueue()
-
     }
 
     updateNode
