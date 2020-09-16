@@ -1,5 +1,5 @@
 import G6, { Graph } from "@antv/g6";
-import { GraphData } from "@antv/g6/lib/types";
+import { GraphData, NodeConfig } from "@antv/g6/lib/types";
 import MiniMap from "@antv/g6/lib/plugins/minimap";
 import {validateConfig} from "./validate";
 import {countNextNodePosition} from "./computed";
@@ -193,6 +193,19 @@ class ClFlowCore implements ClFlowClass {
     }
 
     /**
+     * 检测是否存在graph对象(是否已初始化)
+     * @author chrislee
+     * @Time 2020/9/16
+     */
+    private checkGraph(){
+        if(this.graph===null){
+            throw new Error(`please run method "init()" first!`)
+        }else{
+            return this.graph
+        }
+    }
+
+    /**
      * 注册一个检测dom元素的size变化监听器
      * @param dom 目标dom
      * @param graph 图实例
@@ -256,6 +269,7 @@ class ClFlowCore implements ClFlowClass {
      * @Time 2020/9/15
      */
     createNode(info:nodeInfo){
+        let graph = this.checkGraph()
         const nodeData = {
             id:info.id,
             x:info.x??100,
@@ -268,7 +282,7 @@ class ClFlowCore implements ClFlowClass {
             label:info.label??"",
         }
         try{
-            this.graph?.addItem("node",nodeData);
+            graph.addItem("node",nodeData);
             this.enterUndoQueue({action:"create",payload:{nodeData}});
             this.cleanRedoQueue()
         }catch(e){
@@ -283,9 +297,9 @@ class ClFlowCore implements ClFlowClass {
      * @param type 生成单节点还是条件节点 single=>单节点| multi=>条件节点
      */
     addRelation(source:nodeInfo,target:nodeInfo,type:"single"|"multi"){
+        let graph = this.checkGraph();
         const direction = this.config.direction;
         const {nodes,edges} = this.graph?.save()  as GraphData
-        const nodeType = source.type;
         const targetId:string = target.id??`node${(nodes?.length ?? 0) + 1}`;
         const position = countNextNodePosition(direction, source);
         const nodeData = {
@@ -304,8 +318,8 @@ class ClFlowCore implements ClFlowClass {
             target: targetId
         }
         try{
-            this.graph?.addItem("node",nodeData);
-            this.graph?.addItem("edge",edgeData);
+            graph.addItem("node",nodeData);
+            graph.addItem("edge",edgeData);
         }catch(e){
             console.error(e)
         }
@@ -351,10 +365,10 @@ class ClFlowCore implements ClFlowClass {
                 targetAnchor
             };
             try{
-                this.graph?.addItem("node", onNode);
-                this.graph?.addItem("node", offNode);
-                this.graph?.addItem("edge", onEdge);
-                this.graph?.addItem("edge", offEdge);
+                graph.addItem("node", onNode);
+                graph.addItem("node", offNode);
+                graph.addItem("edge", onEdge);
+                graph.addItem("edge", offEdge);
                 snapshot = {
                     action:"multiNode",
                     payload:{
@@ -377,7 +391,30 @@ class ClFlowCore implements ClFlowClass {
         this.cleanRedoQueue()
     }
 
-    updateNode
+    /**
+     * 更新一个节点的信息，包括移动、业务信息、节点形态等变换
+     * @param nodeData 节点信息
+     * @author chrislee
+     * @Time 2020/9/16
+     */
+    updateNode(nodeData:nodeInfo){
+        let graph = this.checkGraph();
+        let originNodeData = graph.findById(nodeData.id).getModel() as NodeConfig;
+        try{
+            graph.updateItem("node",nodeData as NodeConfig)
+        }catch(e){
+            console.error(e)
+        }
+        this.enterUndoQueue({
+            action:"update",
+            payload:{
+                before:{nodeData:(originNodeData as nodeInfo)},
+                after:{nodeData}
+            }
+        });
+        this.cleanRedoQueue()
+    }
+
     deleteNode
     addReback
     bindEvent
