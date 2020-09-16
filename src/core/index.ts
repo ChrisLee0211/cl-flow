@@ -3,10 +3,12 @@ import { GraphData, NodeConfig } from "@antv/g6/lib/types";
 import MiniMap from "@antv/g6/lib/plugins/minimap";
 import {validateConfig} from "./validate";
 import {countNextNodePosition} from "./computed";
+import {nodeRegisterInit,edgeRegisterInit} from "./g6Config";
 
 import {isArray} from "../utils";
 import {Resizer} from "../utils/ResizeObserver";
 import {DeQueue} from "../utils/DeQueue";
+import { ColorReverse } from "src/utils/ColorReverse";
 
 interface ClFlowClass {
     instance:typeof G6;
@@ -68,6 +70,9 @@ export interface ClConfig{
             fill:string;
         }
     };
+    /** 节点和边的基础颜色,必须要是16进制颜色码，因为内部有颜色翻转的逻辑 */
+    baseNodeColor?:string;
+    baseEdgeColor?:string;
     /** 最大记忆操作数（撤销/恢复的最大步数） */
     backStep?:number;
     /** 渲染模式，svg|canvas （只有svg才支持自定义dom图形，但性能上canvas最好） */
@@ -90,10 +95,14 @@ class ClFlowCore implements ClFlowClass {
     constructor(config:ClConfig){
         const validate:boolean = validateConfig(config);
         if(validate){
-            this.config = config
+            this.config = config;
+            this.config["baseEdgeColor"] = this.config.baseEdgeColor??"#000A34";
+            this.config["baseNodeColor"] = this.config.baseNodeColor??"#FFFFFF";
         }else{
             throw new Error("please check the config type");
-        }
+        };
+        nodeRegisterInit(G6,this.config);
+        edgeRegisterInit(G6,this.config);
     }
 
     /**
@@ -137,13 +146,13 @@ class ClFlowCore implements ClFlowClass {
                 size: 200,
                 labelCfg: {
                     style: {
-                        fill: "#0000A6",
+                        fill: ColorReverse(this.config.baseNodeColor as string),
                         fontSize: 10,
                     },
                 },
                 style: {
                     stroke: "#72CC4A",
-                    fill: "#1890FF",
+                    fill: this.config.baseNodeColor,
                     width: 200,
                 },
                 ...this.config.defaultNode??{}
@@ -158,7 +167,7 @@ class ClFlowCore implements ClFlowClass {
                 },
                 default: {
                     size: 200,
-                    fill: "#1890FF",
+                    fill: this.config.baseNodeColor,
                     stroke: "#72CC4A",
                     width: 200,
                 },
@@ -172,12 +181,12 @@ class ClFlowCore implements ClFlowClass {
                     },
                 },
                 style: {
-                    stroke: "#F6BD16",
+                    stroke: this.config.baseEdgeColor,
                     radius: 10,
                     lineWidth: 10,
                     endArrow: {
                         path: "M 0,0 L -2,1 L 0,0 L -2,-1 L 0,0",
-                        fill: "#333",
+                        fill: this.config.baseEdgeColor,
                         stroke: "#666",
                     }
                 },
@@ -301,7 +310,9 @@ class ClFlowCore implements ClFlowClass {
         const direction = this.config.direction;
         const {nodes,edges} = this.graph?.save()  as GraphData
         const targetId:string = target.id??`node${(nodes?.length ?? 0) + 1}`;
+        // 计算下一个节点在指定的流向布局中应该绘制的坐标
         const position = countNextNodePosition(direction, source);
+        // 对于添加单个点来说，创建一个指向只需要新增一个节点和一条从当前节点指向它的边即可
         const nodeData = {
             id:targetId,
             label:target.label??"",
@@ -323,7 +334,9 @@ class ClFlowCore implements ClFlowClass {
         }catch(e){
             console.error(e)
         }
+        // 创建一次快照
         let snapshot:snapshot = {action:"addRelation",payload:{source:source,target:nodeData,edge:edgeData}};
+        // 对于创建条件分支节点来说（比如网关等流程），那么就需要在以上的情况下，再衍生出两条指向和两个点形成分支的关系
         if(type === "multi"){
             const sourceAnchor: number[] = direction === "horizontal" ? [0, 2] : [1, 3];
             const targetAnchor: number = direction === "horizontal" ? 3 : 0;
@@ -415,8 +428,31 @@ class ClFlowCore implements ClFlowClass {
         this.cleanRedoQueue()
     }
 
-    deleteNode
-    addReback
+    /**
+     * 删除一个节点
+     * @param id 节点的id
+     * @author chrislee
+     * @Time 2020/09/16
+     */
+    deleteNode(id:string){
+        let graph = this.checkGraph();
+        let originNodeData = graph.findById(id).getModel() as NodeConfig;
+        try{
+            graph.removeItem(id);
+            this.enterUndoQueue({
+                action:"delete",
+                payload:{
+                    nodeData:originNodeData as nodeInfo
+                }
+            });
+        }catch(e){
+            console.error(e)
+        }
+    }
+
+    addReback(){
+        
+    }
     bindEvent
     redo
     undo
