@@ -86,15 +86,24 @@ export interface ClConfig{
  * @Time 2020/9/15
  */
 class ClFlowCore implements ClFlowClass {
+    /** G6图形底层实例 */
     instance:typeof G6 = G6;
+    /** 图实例对象 */
     private graph:Graph|null = null;
+    /** 初始化配置项 */
     private config:ClConfig ;
+    /** 元素监听器 */
     private resizer:Resizer|null = null;
+    /** 撤销对象双端队列 */
     private undoDeQueue:DeQueue|null = null;
+    /** 恢复对象双端队列 */
     private redoDeQueue:DeQueue|null = null;
+    /** 最大可恢复步数 */
     private maxStep:number = 0;
     /** 用于记录没有父节点的起始节点*/
     private freeNodes:string[] = [];
+    /** 事件注册存储器 */
+    private events:Array<{type:eventType,fn:Function}>=[];
     constructor(config:ClConfig){
         const validate:boolean = validateConfig(config);
         if(validate){
@@ -106,6 +115,7 @@ class ClFlowCore implements ClFlowClass {
         };
         nodeRegisterInit(G6,this.config);
         edgeRegisterInit(G6,this.config);
+        this.initEventProxy();
     }
 
     /**
@@ -200,7 +210,8 @@ class ClFlowCore implements ClFlowClass {
         graph.render();
         this.graph = graph;
         this.config.fitview&&this.registerResizer(this.config.container,graph);
-        this.createDequeue(this.config.backStep??0)
+        this.createDequeue(this.config.backStep??0);
+        this.registeEvent()
         return this
     }
 
@@ -273,6 +284,44 @@ class ClFlowCore implements ClFlowClass {
         if(this.redoDeQueue===null) return
         this.redoDeQueue.clear()
     }
+    
+    /**
+     * 使用proxy初始化一个事件存储器，自动过滤重复类型的事件
+     * @author chrislee
+     * @Time 2020/9/18
+     */
+    private initEventProxy(){
+        this.events = new Proxy<Array<{type:eventType,fn:Function}>>([],{
+            set(target,key,value){
+                if(key !== "length"){
+                    let eventIdx:number = target.findIndex(event => event.type===value.type);
+                    if(eventIdx===-1){
+                        target.push(value)
+                    }else{
+                        target[eventIdx] = value
+                    }
+                    return true
+                }else{
+                    return Reflect.set(target,key,Object.keys(target).length)
+                }
+            }
+        })
+    }
+
+    /**
+     * 注册所有event储存器里的事件
+     * @author chrislee
+     * @Time 2020/9/18
+     */
+    private registeEvent(){
+        const graph = this.checkGraph();
+        const len = this.events.length;
+        for(let i=0;i<len;i++){
+            graph.on(this.events[i].type,(evt) => {
+                this.events[i].fn(evt)
+            })
+        }
+    }
 
     /**
      * 创建一个新节点
@@ -281,7 +330,7 @@ class ClFlowCore implements ClFlowClass {
      * @Time 2020/9/15
      */
     createNode(info:nodeInfo){
-        const graph = this.checkGraph()
+        const graph = this.checkGraph();
         const nodeData = {
             id:info.id,
             x:info.x??100,
@@ -525,7 +574,17 @@ class ClFlowCore implements ClFlowClass {
         return result
     }
 
-    bindEvent
+    /**
+     * 绑定事件（实际上会在初始化graph实例后就马上进行绑定），意味着应该在初始化前就定义好
+     * @param eventType 事件类型
+     * @param fn 具体执行逻辑
+     * @author chrislee
+     * @Time 2020/9/18
+     */
+    bindEvent(eventType:eventType,fn:(item:any)=>void){
+        this.events.push({type:eventType,fn});
+    }
+
     redo
     undo
     clean

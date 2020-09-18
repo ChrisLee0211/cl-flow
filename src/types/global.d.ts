@@ -91,7 +91,8 @@ type eventType = "node:click" |
 "node:contextmenu" | 
 "node:dragstart" |
 "node:dragend" | 
-"node:drop"
+"node:drop" |
+"canvas:click"
 type snapshot = createAction|addRelationAction|multiNodeAction|updateAction|deleteAction|clearAction|addRebackAction
 
 type createAction = {
