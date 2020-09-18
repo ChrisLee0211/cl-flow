@@ -58,6 +58,10 @@ interface nodeInfo {
     style:{
         [key:string]:any
     };
+    /** 回流关系 */
+    reback?:{
+        id:string
+    }
     /** 节点存储的额外业务信息 */
     extra?:{
         [key:string]:any

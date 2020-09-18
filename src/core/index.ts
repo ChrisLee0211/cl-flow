@@ -1,5 +1,5 @@
-import G6, { Graph } from "@antv/g6";
-import { GraphData, NodeConfig } from "@antv/g6/lib/types";
+import G6, { Graph,Algorithm } from "@antv/g6";
+import { GraphData, NodeConfig, EdgeConfig } from "@antv/g6/lib/types";
 import MiniMap from "@antv/g6/lib/plugins/minimap";
 import {validateConfig} from "./validate";
 import {countNextNodePosition} from "./computed";
@@ -93,7 +93,7 @@ class ClFlowCore implements ClFlowClass {
     private undoDeQueue:DeQueue|null = null;
     private redoDeQueue:DeQueue|null = null;
     private maxStep:number = 0;
-    /** 用于记录没有任何指向关系的孤立节点 */
+    /** 用于记录没有父节点的起始节点*/
     private freeNodes:string[] = [];
     constructor(config:ClConfig){
         const validate:boolean = validateConfig(config);
@@ -281,7 +281,7 @@ class ClFlowCore implements ClFlowClass {
      * @Time 2020/9/15
      */
     createNode(info:nodeInfo){
-        let graph = this.checkGraph()
+        const graph = this.checkGraph()
         const nodeData = {
             id:info.id,
             x:info.x??100,
@@ -310,7 +310,7 @@ class ClFlowCore implements ClFlowClass {
      * @param type 生成单节点还是条件节点 single=>单节点| multi=>条件节点
      */
     addRelation(source:nodeInfo,target:nodeInfo,type:"single"|"multi"){
-        let graph = this.checkGraph();
+        const graph = this.checkGraph();
         const direction = this.config.direction;
         const {nodes,edges} = this.graph?.save()  as GraphData
         const targetId:string = target.id??`node${(nodes?.length ?? 0) + 1}`;
@@ -415,7 +415,7 @@ class ClFlowCore implements ClFlowClass {
      * @Time 2020/9/16
      */
     updateNode(nodeData:nodeInfo){
-        let graph = this.checkGraph();
+        const graph = this.checkGraph();
         let originNodeData = graph.findById(nodeData.id).getModel() as NodeConfig;
         try{
             graph.updateItem("node",nodeData as NodeConfig)
@@ -439,7 +439,7 @@ class ClFlowCore implements ClFlowClass {
      * @Time 2020/09/16
      */
     deleteNode(id:string){
-        let graph = this.checkGraph();
+        const graph = this.checkGraph();
         let originNodeData = graph.findById(id).getModel() as NodeConfig;
         try{
             graph.removeItem(id);
@@ -461,20 +461,68 @@ class ClFlowCore implements ClFlowClass {
      * @author chrislee
      * @Time 2020/9/16
      */
-    addReback(){
-
+    addReback(sourceId:string,targetId:string){
+        const graph = this.checkGraph();
+        const {direction} = this.config;
+        const {edges} = graph.save() as GraphData;
+        const sourceNode = graph.findById(sourceId).getModel() as NodeConfig;
+        const targetNode = graph.findById(targetId).getModel() as NodeConfig;
+        if(!sourceNode||!targetNode) throw new Error(`The node id is invalid`)
+        // 理论上每次更新一个节点的回流关系，都要先移除他上一次建立的关系
+        const lastRebackNode = (sourceNode as nodeInfo).reback??null;
+        if (lastRebackNode) {
+            const targetEdge = edges?.find((edge) => {
+                return edge.source === sourceId && edge.target === lastRebackNode.id
+            });
+            if (targetEdge) {
+                graph.remove(targetEdge.id as string);
+            }
+        }
+        const anchor = direction === "horizontal" ? 0 : 3;
+        const edgeData: EdgeConfig = {
+            id: `edge${(edges?.length ?? 0) + 1}`,
+            type: `reback-line-${direction}`,
+            source: sourceId,
+            target: targetId,
+            sourceAnchor: anchor,
+            targetAnchor: anchor
+        };
+        graph.addItem("edge", edgeData);
+        graph.updateItem(sourceId,{...sourceNode,...{reback:{id:targetId}}});
+        this.enterUndoQueue({
+            action:"addReback",
+            payload:{
+                edge:edgeData
+            }
+        })
     }
 
     
     /**
      * 查找目标节点可创建回流关系的可用节点
      * @param id 查找目标id
+     * @returns {array} 返回所有可用的节点信息
      * @author chrislee
      * @Time 2020/9/16
      */
     getRebackNodes(id):Array<any>{
+        if(this.freeNodes.includes(id)) return []
         const graph = this.checkGraph();
-        
+        const {findAllPath} = Algorithm;
+        // 查找所有
+        const allPaths = this.freeNodes.map(nodeId => {
+            return findAllPath(graph,nodeId,id,true)
+        }).filter(path => path.length>0);
+        const result:Array<any> = [];
+        allPaths.forEach(path => {
+            for(let i=0;i<path.length;i++){
+                if(path[i]!==id){
+                    let node = graph.findById(path[i]);
+                    result.push(node)
+                }
+            }
+        });
+        return result
     }
 
     bindEvent
