@@ -575,6 +575,34 @@ class ClFlowCore implements ClFlowClass {
     }
 
     /**
+     * 清除流程图画布内容
+     * @author chrislee
+     * @Time 2020/9/18
+     */
+    clean(){
+        const graph = this.checkGraph();
+        const {nodes,edges} = graph.save() as GraphData;
+        this.enterUndoQueue({
+            action:"clear",
+            payload:{
+                graph:{...nodes,...edges}
+            }
+        })
+        graph.clear();
+    }
+
+    /**
+     * 销毁graph实例
+     * @author chrislee
+     * @Time 2020/9/18
+     */
+    destory(){
+        const graph = this.checkGraph();
+        graph.destroy();
+        this.graph = null;
+    }
+
+    /**
      * 绑定事件（实际上会在初始化graph实例后就马上进行绑定），意味着应该在初始化前就定义好
      * @param eventType 事件类型
      * @param fn 具体执行逻辑
@@ -585,8 +613,24 @@ class ClFlowCore implements ClFlowClass {
         this.events.push({type:eventType,fn});
     }
 
-    redo
-    undo
-    clean
-    destory
+    /**
+     * 执行撤销操作
+     * @author chrislee
+     * @Time 2020/9/18
+     */
+    redo(){
+        if(this.undoDeQueue===null) return
+        const snapshot = this.undoDeQueue.pop() as snapshot;
+
+    }
+
+    /**
+     * 执行恢复操作
+     * @author chrislee
+     * @Time 2020/9/18
+     */
+    undo(){
+
+    }
+
 }
