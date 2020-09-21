@@ -1,4 +1,4 @@
-# CLFlow
+# cl-flow
 
 ![IMG](https://img.shields.io/badge/%40antv%2Fg6-v3.7.1-blue)
 ![IMG](https://img.shields.io/badge/typescript-v3.9.6-blue)
@@ -9,7 +9,7 @@
 <br>
 
 # 效果演示
-基于`react`+`Concent`+`antd`+`CLFlow`实现的一个简单流程图设计工具
+基于`react`+`Concent`+`antd`+`cl-flow`实现的一个简单流程图设计工具
 
 <br>
 
