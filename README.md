@@ -9,10 +9,10 @@
 <br>
 
 # 效果演示
-基于`react`+`Concent`+`antd`+`cl-flow`实现的一个简单流程图设计工具
+基于`react`+`concent`+`antd`+`cl-flow`实现的一个简单流程图设计工具
 
 <br>
 
 ![IMG](./example/example.gif)
 
-> 推荐一个`react`好用又强大的状态管理库：[Concent](https://concentjs.github.io/concent-doc/guide/first-sight)
+> 推荐一个`react`好用又强大的状态管理库：[concent](https://concentjs.github.io/concent-doc/guide/first-sight)
