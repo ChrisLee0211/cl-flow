@@ -104,6 +104,8 @@ class ClFlowCore implements ClFlowClass {
     private freeNodes:string[] = [];
     /** 事件注册存储器 */
     private events:Array<{type:eventType,fn:Function}>=[];
+    /** 储存正在移动的节点图形关键信息（用于在撤销/恢复中模拟轨迹还原） */
+    private movingNode:{x:number,y:number,id:string} | null= null;
     constructor(config:ClConfig){
         const validate:boolean = validateConfig(config);
         if(validate){
@@ -309,7 +311,7 @@ class ClFlowCore implements ClFlowClass {
     }
 
     /**
-     * 注册所有event储存器里的事件
+     * 注册所有event储存器里的事件(对于节点拖拽移动事件，内置记录轨迹状态逻辑)
      * @author chrislee
      * @Time 2020/9/18
      */
@@ -318,7 +320,28 @@ class ClFlowCore implements ClFlowClass {
         const len = this.events.length;
         for(let i=0;i<len;i++){
             graph.on(this.events[i].type,(evt) => {
-                this.events[i].fn(evt)
+                if(this.events[i].type === "node:dragstart"){
+                    this.movingNode = {x:evt.x,y:evt.y,id:evt?.item?._cfg?.id??null};
+                    if(this.movingNode.id===null){
+                        return
+                    }
+                };
+                if(this.events[i].type === "node:dragend"){
+                    const moveTarget = evt.item._cfg.model;
+                    if(this.movingNode&&moveTarget.id === this.movingNode.id){
+                        const nodeData = graph.findById(moveTarget.id).getModel() as nodeInfo;
+                        this.enterUndoQueue({
+                            action:"update",
+                            payload:{
+                                before:{nodeData:{...nodeData,...{x:this.movingNode.x,y:this.movingNode.y}}},
+                                after:{nodeData:{...nodeData}}
+                            }
+                        });
+                        this.cleanRedoQueue();
+                        this.movingNode = null;
+                    }
+                };
+                this.events[i].fn(evt);
             })
         }
     }
