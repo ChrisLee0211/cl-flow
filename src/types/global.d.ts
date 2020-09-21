@@ -151,6 +151,7 @@ type clearAction = {
 type addRebackAction = {
     action:"addReback",
     payload:{
+        source:nodeInfo,
         edge:any
     }
 }

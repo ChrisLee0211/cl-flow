@@ -465,7 +465,7 @@ class ClFlowCore implements ClFlowClass {
      */
     updateNode(nodeData:nodeInfo){
         const graph = this.checkGraph();
-        let originNodeData = graph.findById(nodeData.id).getModel() as NodeConfig;
+        let originNodeData = {...graph.findById(nodeData.id).getModel() as NodeConfig};
         try{
             graph.updateItem("node",nodeData as NodeConfig)
         }catch(e){
@@ -498,6 +498,7 @@ class ClFlowCore implements ClFlowClass {
                     nodeData:originNodeData as nodeInfo
                 }
             });
+            this.cleanRedoQueue()
         }catch(e){
             console.error(e)
         }
@@ -541,9 +542,11 @@ class ClFlowCore implements ClFlowClass {
         this.enterUndoQueue({
             action:"addReback",
             payload:{
-                edge:edgeData
+                edge:edgeData,
+                source:{...sourceNode,...{reback:{id:targetId}}} as nodeInfo
             }
         })
+        this.cleanRedoQueue()
     }
 
     
@@ -589,6 +592,7 @@ class ClFlowCore implements ClFlowClass {
             }
         })
         graph.clear();
+        this.cleanRedoQueue()
     }
 
     /**
@@ -613,15 +617,104 @@ class ClFlowCore implements ClFlowClass {
         this.events.push({type:eventType,fn});
     }
 
-    /**
-     * 执行撤销操作
+     /**
+     * 执行撤销操作(核心逻辑是给每个操作打上tag和那一次用到得数据载荷，进行靶向回溯而不是全量更新节点树)
      * @author chrislee
      * @Time 2020/9/18
      */
-    redo(){
+    undo(){
         if(this.undoDeQueue===null) return
+        const graph = this.checkGraph();
         const snapshot = this.undoDeQueue.pop() as snapshot;
-
+        if(!snapshot) return
+        let resloveSuccess:boolean = true;
+        switch(snapshot.action){
+            case "create":
+                const createNode = snapshot.payload.nodeData;
+                try{
+                    graph.removeItem(createNode.id);
+                }catch(e){
+                    console.error(e);
+                    resloveSuccess = false
+                }
+                break;
+            case "delete":
+                const deleteNode = snapshot.payload.nodeData;
+                const nodeData = {
+                    id:deleteNode.id,
+                    x:deleteNode.x??100,
+                    y:deleteNode.y??100,
+                    size:deleteNode.size??100,
+                    anchorPoints:deleteNode.anchorPoints??[[0.5,0],[1,0.5],[0.5,1],[0,0.5]],
+                    type:deleteNode.type??"node",
+                    extra:deleteNode.extra??{},
+                    style:deleteNode.style,
+                    label:deleteNode.label??"",
+                }
+                try{
+                    graph.addItem("node",nodeData);
+                }catch(e){
+                    console.error(e);
+                    resloveSuccess = false
+                }
+                break;
+            case "update":
+                const beforeNode = snapshot.payload.before.nodeData;
+                graph.updateItem(beforeNode.id,beforeNode as NodeConfig);
+                break;
+            case "multiNode":
+                const multiNodeTarget = snapshot.payload.target;
+                const multiNodeEdge = snapshot.payload.edge;
+                const multiInfo = snapshot.payload.multiInfo;
+                try{
+                    graph.removeItem(multiNodeTarget.id);
+                    graph.removeItem(multiNodeEdge.id);
+                    graph.removeItem(multiInfo.onNode.id);
+                    graph.removeItem(multiInfo.onEdge.id);
+                    graph.removeItem(multiInfo.offNode.id);
+                    graph.removeItem(multiInfo.offEdge.id);
+                }catch(e){
+                    console.error(e);
+                    resloveSuccess = false
+                }
+                break;
+            case "clear":
+                const originGraphData = snapshot.payload.graph;
+                try{
+                    graph.changeData(originGraphData);
+                }catch(e){
+                    console.error(e);
+                    resloveSuccess = false
+                }
+                break;
+            case "addReback":
+                const rebackEdge = snapshot.payload.edge as EdgeConfig;
+                const source = snapshot.payload.source;
+                try{
+                    graph.updateItem(source.id,{...source,...{reback:null}});
+                    graph.removeItem(rebackEdge.id as string);
+                }catch(e){
+                    console.error(e);
+                    resloveSuccess = false
+                }
+                break;
+            case "addRelation":
+                const relationTarget = snapshot.payload.target;
+                const relationEdge = snapshot.payload.edge;
+                try{
+                    graph.removeItem(relationEdge.id);
+                    graph.removeItem(relationTarget.id);
+                }catch(e){
+                    console.error(e);
+                    resloveSuccess = false
+                }
+                break;
+            default:
+                return
+        }
+        if(resloveSuccess){
+            this.redoDeQueue?.push(snapshot)
+        }
     }
 
     /**
@@ -629,8 +722,89 @@ class ClFlowCore implements ClFlowClass {
      * @author chrislee
      * @Time 2020/9/18
      */
-    undo(){
-
+    redo(){
+        if(this.redoDeQueue===null) return;
+        const graph = this.checkGraph();
+        const snapshot = this.redoDeQueue.pop() as snapshot;
+        if(!snapshot) return
+        let resloveSuccess:boolean = true;
+        switch(snapshot.action){
+            case "create":
+                const createNode = snapshot.payload.nodeData;
+                try{
+                    graph.addItem("node",createNode as NodeConfig);
+                }catch(e){
+                    console.error(e);
+                    resloveSuccess = false;
+                };
+                break;
+            case "delete":
+                const deleteNode = snapshot.payload.nodeData;
+                try{
+                    graph.removeItem(deleteNode.id)
+                }catch(e){
+                    console.error(e);
+                    resloveSuccess = false;
+                };
+                break;
+            case "update":
+                const updateNode = snapshot.payload.after.nodeData;
+                try{
+                    graph.updateItem(updateNode.id,updateNode as NodeConfig)
+                }catch(e){
+                    console.error(e);
+                    resloveSuccess = false;
+                };
+                break;
+            case "clear":
+                graph.clear();
+                break;
+            case "multiNode":
+                const multiTargetNode = snapshot.payload.target;
+                const multiEdge = snapshot.payload.edge;
+                try{
+                    graph.addItem("node",multiTargetNode as NodeConfig);
+                    graph.addItem("edge",multiEdge as EdgeConfig);
+                    graph.addItem("node",snapshot.payload.multiInfo.onNode as NodeConfig);
+                    graph.addItem("node",snapshot.payload.multiInfo.offNode as NodeConfig);
+                    graph.addItem("edge",snapshot.payload.multiInfo.onEdge as EdgeConfig);
+                    graph.addItem("edge",snapshot.payload.multiInfo.offEdge as EdgeConfig);
+                }catch(e){
+                    console.error(e);
+                    resloveSuccess = false;
+                };
+                break;
+            case "addReback":
+                const rebackSource = snapshot.payload.source;
+                const rebackEdge = snapshot.payload.edge;
+                const targetId = rebackEdge.target;
+                try{
+                    graph.updateItem(rebackSource.id,{...rebackSource,...{reback:{id:targetId}}});
+                    graph.addItem("edge",rebackEdge)
+                }catch(e){
+                    console.error(e);
+                    resloveSuccess = false;
+                };
+                break;
+            case "addRelation":
+                const relationTarget = snapshot.payload.target;
+                const relationEdge = snapshot.payload.edge;
+                try{
+                    graph.addItem("node",relationTarget as NodeConfig);
+                    graph.addItem("edge",relationEdge as EdgeConfig);
+                }catch(e){
+                    console.error(e);
+                    resloveSuccess = false;
+                };
+                break;
+            default:
+                return
+        }
+        if(resloveSuccess){
+            this.enterUndoQueue(snapshot)
+        }
     }
+
+   
 
 }
