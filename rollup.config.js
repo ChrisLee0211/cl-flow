@@ -4,25 +4,19 @@ import sourceMaps from "rollup-plugin-sourcemaps";
 import resolve from "@rollup/plugin-node-resolve";
 import commonjs from '@rollup/plugin-commonjs';
 import json from 'rollup-plugin-json';
-import { eslint } from 'rollup-plugin-eslint';
 
 export default {
   input: "./src/index.ts",
+  external:["tslib","@antv/g6"],
   plugins: [
     typescript(),
     resolve(),
     commonjs(),
     json(),
-    eslint({
-      throwOnError: true,
-      throwOnWarning: false,
-      include: ['src/**'],
-      exclude: ['node_modules/**']
-    }),
     sourceMaps(),
-    // babel({
-    //   exclude:'node_modules/**'
-    // })
+    babel({
+      exclude:'node_modules/**'
+    })
   ],
 
   output: [

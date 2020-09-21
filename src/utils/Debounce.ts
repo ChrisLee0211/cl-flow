@@ -6,7 +6,7 @@
  * @Time 2020/6/24
  */
 export const debounce = (fn: Function, delay = 500): Function => {
-    let timer: NodeJS.Timeout = null as any;
+    let timer= null as any;
     return function (this: any, ...args: any): void {
         if (timer) {
             clearTimeout(timer);

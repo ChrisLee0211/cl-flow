@@ -849,3 +849,5 @@ class ClFlowCore implements ClFlowClass {
    
 
 }
+
+export default ClFlowCore
