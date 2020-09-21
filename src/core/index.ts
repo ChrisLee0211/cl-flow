@@ -18,7 +18,9 @@ interface ClFlowClass {
     updateNode(cfg:any):void;
     deleteNode(id:string):void;
     addReback(sourceId:string,targetId:string):void;
-    getRebackNodes(id:string):Array<any>
+    getRebackNodes(id:string):Array<any>;
+    getUndoSteps():number;
+    getRedoSteps():number;
     bindEvent(eventType:eventType,fn:(item:any)=>void);
     redo():void;
     undo():void;
@@ -600,6 +602,22 @@ class ClFlowCore implements ClFlowClass {
         return result
     }
 
+    /**
+     * 获取最大可撤回步数
+     * @author chrislee
+     * @Time 2020/9/21
+     */
+    getUndoSteps():number{
+        return this.undoDeQueue?.size() ?? 0
+    }
+    /**
+     * 获取最大可恢复步数
+     * @author chrislee
+     * @Time 2020/9/21
+     */
+    getRedoSteps(){
+        return this.redoDeQueue?.size() ?? 0
+    }
     /**
      * 清除流程图画布内容
      * @author chrislee
