@@ -26,6 +26,7 @@ interface ClFlowClass {
     undo():void;
     clean():void;
     destory():void;
+    export():GraphData
 }
 
 
@@ -846,7 +847,15 @@ class ClFlowCore implements ClFlowClass {
         }
     }
 
-   
+    /**
+     * 导出图数据
+     * @author chrislee
+     * @Time 2020/9/23
+     */
+   export():GraphData{
+    const graph = this.checkGraph();
+    return graph.save() as GraphData
+   }
 
 }
 
