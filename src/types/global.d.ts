@@ -151,7 +151,8 @@ type updateAction = {
 type deleteAction = {
     action: "delete",
     payload:{
-        nodeData:nodeInfo
+        nodeData:nodeInfo,
+        edges:any[]
     }
 }
 

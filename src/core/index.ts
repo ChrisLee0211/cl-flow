@@ -1,5 +1,5 @@
 import G6, { Graph,Algorithm } from "@antv/g6";
-import { GraphData, NodeConfig, EdgeConfig } from "@antv/g6/lib/types";
+import { GraphData, NodeConfig, EdgeConfig, Item } from "@antv/g6/lib/types";
 import MiniMap from "@antv/g6/lib/plugins/minimap";
 import {validateConfig} from "./validate";
 import {countNextNodePosition} from "./computed";
@@ -526,12 +526,18 @@ class ClFlowCore implements ClFlowClass {
     deleteNode(id:string){
         const graph = this.checkGraph();
         let originNodeData = graph.findById(id).getModel() as NodeConfig;
+        const edges = graph.findAll("edge",(item:Item) => {
+            const target = item.getModel() as EdgeConfig
+            const source = item.getModel() as EdgeConfig
+            return target.id===id||source.id === id
+        })
         try{
             graph.removeItem(id);
             this.enterUndoQueue({
                 action:"delete",
                 payload:{
-                    nodeData:originNodeData as nodeInfo
+                    nodeData:originNodeData as nodeInfo,
+                    edges
                 }
             });
             this.cleanRedoQueue()
@@ -692,6 +698,7 @@ class ClFlowCore implements ClFlowClass {
                 break;
             case "delete":
                 const deleteNode = snapshot.payload.nodeData;
+                const deleteEdges = snapshot.payload.edges;
                 const nodeData = {
                     id:deleteNode.id,
                     x:deleteNode.x??100,
@@ -705,6 +712,10 @@ class ClFlowCore implements ClFlowClass {
                 }
                 try{
                     graph.addItem("node",nodeData);
+                    const edgeNums:number = deleteEdges.length;
+                    for(let i=0;i<edgeNums;i++){
+                        graph.addItem("edge",deleteEdges[i])
+                    }
                 }catch(e){
                     console.error(e);
                     resloveSuccess = false
@@ -801,8 +812,13 @@ class ClFlowCore implements ClFlowClass {
                 break;
             case "delete":
                 const deleteNode = snapshot.payload.nodeData;
+                const deleteEdges = snapshot.payload.edges;
                 try{
-                    graph.removeItem(deleteNode.id)
+                    graph.removeItem(deleteNode.id);
+                    const edgeNums:number = deleteEdges.length;
+                    for(let i=0;i<edgeNums;i++){
+                        graph.removeItem(deleteEdges[i].id)
+                    }
                 }catch(e){
                     console.error(e);
                     resloveSuccess = false;
