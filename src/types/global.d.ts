@@ -93,7 +93,14 @@ type eventType = "node:click" |
 "node:dragend" | 
 "node:drop" |
 "canvas:click"
-type snapshot = createAction|addRelationAction|multiNodeAction|updateAction|deleteAction|clearAction|addRebackAction
+type snapshot = createAction|
+    addRelationAction|
+    multiNodeAction|
+    updateAction|
+    deleteAction|
+    clearAction|
+    addRebackAction|
+    createRelationAction
 
 type createAction = {
     action:"create",
@@ -104,6 +111,13 @@ type createAction = {
 
 type addRelationAction = {
     action:"addRelation",
+    payload:{
+        edge:edgeInfo
+    }
+}
+
+type createRelationAction = {
+    action:"createRelation",
     payload:{
         source:nodeInfo,
         target:nodeInfo,

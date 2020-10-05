@@ -387,8 +387,9 @@ class ClFlowCore implements ClFlowClass {
     addRelation(source:nodeInfo,target:nodeInfo,type:"single"|"multi"){
         const graph = this.checkGraph();
         const direction = this.config.direction;
-        const {nodes,edges} = this.graph?.save()  as GraphData
+        const {nodes,edges} = this.graph?.save()  as GraphData;
         const targetId:string = target.id??`node${(nodes?.length ?? 0) + 1}`;
+        const targetNode = graph.findById(targetId).getModel()??null;
         // 计算下一个节点在指定的流向布局中应该绘制的坐标
         const position = countNextNodePosition(direction, source);
         // 对于添加单个点来说，创建一个指向只需要新增一个节点和一条从当前节点指向它的边即可
@@ -408,13 +409,19 @@ class ClFlowCore implements ClFlowClass {
             target: targetId
         }
         try{
-            graph.addItem("node",nodeData);
+            // 如果目标节点已经存在，则不需要创建
+            targetNode===null && graph.addItem("node",nodeData);
             graph.addItem("edge",edgeData);
         }catch(e){
             console.error(e)
         }
         // 创建一次快照
-        let snapshot:snapshot = {action:"addRelation",payload:{source:source,target:nodeData,edge:edgeData}};
+        let snapshot:snapshot;
+        if(targetNode===null){
+            snapshot = {action:"createRelation",payload:{source:source,target:nodeData,edge:edgeData}};
+        }else{
+            snapshot = {action:"addRelation",payload:{edge:edgeData}}
+        }
         // 对于创建条件分支节点来说（比如网关等流程），那么就需要在以上的情况下，再衍生出两条指向和两个点形成分支的关系
         if(type === "multi"){
             const sourceAnchor: number[] = direction === "horizontal" ? [0, 2] : [1, 3];
@@ -457,6 +464,9 @@ class ClFlowCore implements ClFlowClass {
                 targetAnchor
             };
             try{
+                if(targetNode!==null){
+                    throw new Error(`Type 'multi' only recieved a new target node`)
+                }
                 graph.addItem("node", onNode);
                 graph.addItem("node", offNode);
                 graph.addItem("edge", onEdge);
@@ -741,11 +751,20 @@ class ClFlowCore implements ClFlowClass {
                 }
                 break;
             case "addRelation":
-                const relationTarget = snapshot.payload.target;
                 const relationEdge = snapshot.payload.edge;
                 try{
                     graph.removeItem(relationEdge.id);
-                    graph.removeItem(relationTarget.id);
+                }catch(e){
+                    console.error(e);
+                    resloveSuccess = false
+                }
+                break;
+            case "createRelation":
+                const createRelationTarget = snapshot.payload.target;
+                const createRelationEdge = snapshot.payload.edge;
+                try{
+                    graph.removeItem(createRelationEdge.id);
+                    graph.removeItem(createRelationTarget.id);
                 }catch(e){
                     console.error(e);
                     resloveSuccess = false
@@ -829,11 +848,20 @@ class ClFlowCore implements ClFlowClass {
                 };
                 break;
             case "addRelation":
-                const relationTarget = snapshot.payload.target;
                 const relationEdge = snapshot.payload.edge;
                 try{
-                    graph.addItem("node",relationTarget as NodeConfig);
                     graph.addItem("edge",relationEdge as EdgeConfig);
+                }catch(e){
+                    console.error(e);
+                    resloveSuccess = false;
+                };
+                break;
+            case "createRelation":
+                const createRelationTarget = snapshot.payload.target;
+                const createRelationEdge = snapshot.payload.edge;
+                try{
+                    graph.addItem("node",createRelationTarget as NodeConfig);
+                    graph.addItem("edge",createRelationEdge as EdgeConfig);
                 }catch(e){
                     console.error(e);
                     resloveSuccess = false;
