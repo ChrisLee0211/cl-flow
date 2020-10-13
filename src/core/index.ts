@@ -2,7 +2,7 @@ import G6, { Graph,Algorithm } from "@antv/g6";
 import { GraphData, NodeConfig, EdgeConfig, Item } from "@antv/g6/lib/types";
 import MiniMap from "@antv/g6/lib/plugins/minimap";
 import {validateConfig} from "./validate";
-import {countNextNodePosition} from "./computed";
+import {countNextNodePosition,countRebackAnchor} from "./computed";
 import {nodeRegisterInit,edgeRegisterInit} from "./g6Config";
 
 import {isArray} from "../utils";
@@ -570,7 +570,7 @@ class ClFlowCore implements ClFlowClass {
                 graph.remove(targetEdge.id as string);
             }
         }
-        const anchor = direction === "horizontal" ? 0 : 3;
+        const anchor = countRebackAnchor(direction,(sourceNode as nodeInfo),(targetNode as nodeInfo))
         const edgeData: EdgeConfig = {
             id: `edge${(edges?.length ?? 0) + 1}`,
             type: `reback-line-${direction}`,
