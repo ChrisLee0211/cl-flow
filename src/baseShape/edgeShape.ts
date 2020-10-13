@@ -104,16 +104,22 @@ export function edgeRegisterInit(instance:typeof G6,baseConfig:ClConfig):void{
             const startPoint = startAnchorPoint ?? { x: 0, y: 0 };
             const endPoint = cfg?.endPoint ?? { x: 0, y: 0 };
             const sourceNodeSize = ((cfg as EdgeConfig).sourceNode?._cfg.model?.size) ?? 200;
+            const path = sourceAnchorIndex === 2 ? [
+                ["M", startPoint.x, startPoint.y],
+                ["L", startPoint.x, startPoint.y + (sourceNodeSize as number)],
+                ["L", endPoint.x, startPoint.y + (sourceNodeSize as number)],
+                ["L", endPoint.x, endPoint.y]
+            ] : [
+                    ["M", startPoint.x, startPoint.y],
+                    ["L", startPoint.x, startPoint.y - (sourceNodeSize as number)],
+                    ["L", endPoint.x, startPoint.y - (sourceNodeSize as number)],
+                    ["L", endPoint.x, endPoint.y]
+                ]
             if (group) {
                 shape = group.addShape("path", {
                     attrs: {
                         stroke: edgeColor,
-                        path: [
-                            ["M", startPoint.x, startPoint.y],
-                            ["L", startPoint.x, startPoint.y - (sourceNodeSize as number)],
-                            ["L", endPoint.x, startPoint.y - (sourceNodeSize as number)],
-                            ["L", endPoint.x, endPoint.y]
-                        ],
+                        path:path,
                         lineWidth: 10,
                         endArrow: {
                             path: "M 0,0 L -2,1 L 0,0 L -2,-1 L 0,0",
@@ -145,16 +151,22 @@ export function edgeRegisterInit(instance:typeof G6,baseConfig:ClConfig):void{
             const startPoint = startAnchorPoint ?? { x: 0, y: 0 };
             const endPoint = cfg?.endPoint ?? { x: 0, y: 0 };
             const sourceNodeSize = ((cfg as EdgeConfig).sourceNode?._cfg.model?.size) ?? 200;
+            const path = sourceAnchorIndex === 1 ? [
+                ["M", startPoint.x, startPoint.y],
+                ["L", startPoint.x + (sourceNodeSize as number), startPoint.y],
+                ["L", startPoint.x + (sourceNodeSize as number), endPoint.y],
+                ["L", endPoint.x, endPoint.y]
+            ] : [
+                    ["M", startPoint.x, startPoint.y],
+                    ["L", startPoint.x - (sourceNodeSize as number), startPoint.y],
+                    ["L", startPoint.x - (sourceNodeSize as number), endPoint.y],
+                    ["L", endPoint.x, endPoint.y]
+                ]
             if (group) {
                 shape = group.addShape("path", {
                     attrs: {
                         stroke: edgeColor,
-                        path: [
-                            ["M", startPoint.x, startPoint.y],
-                            ["L", startPoint.x - (sourceNodeSize as number), startPoint.y],
-                            ["L", startPoint.x - (sourceNodeSize as number), endPoint.y],
-                            ["L", endPoint.x, endPoint.y]
-                        ],
+                        path: path,
                         lineWidth: 10,
                         endArrow: {
                             path: "M 0,0 L -2,1 L 0,0 L -2,-1 L 0,0",

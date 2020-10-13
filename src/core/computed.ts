@@ -30,7 +30,7 @@ export const countNextNodePosition = (direction: directionType, node: nodeInfo):
  */
 export const countRebackAnchor = (direction:directionType,source:nodeInfo,target:nodeInfo):number => {
     // 水平布局用y比较，垂直布局用x比较
-    // 坐标系是画布左下角为0，0
+    // 坐标系是画布左上角为0，0
     const sourceBaseLocate = (direction === "horizontal"? source.y : source.x) as number;
     const targetBaseLocate = (direction === "horizontal"? target.y : target.x) as number;
     let anchor:number = 0;
