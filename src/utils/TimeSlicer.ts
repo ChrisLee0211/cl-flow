@@ -19,3 +19,7 @@ function timeSlice(gen:GeneratorFunction):Function|void{
         setTimeout(next)
     }
 }
+
+class TimeSlicer {
+    
+}
